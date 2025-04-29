@@ -2,106 +2,84 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>活動查詢系統</title>
+  <title>活動資訊查詢系統</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background-color: #f7f7f7;
-    }
-    h1 {
-      color: #333;
-    }
-    input, button {
-      padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-      max-width: 300px;
-    }
-    #result {
-      background-color: #fff;
-      padding: 20px;
-      margin-top: 20px;
-      border: 1px solid #ddd;
-    }
-    .error {
-      color: red;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    input, button { padding: 8px; margin: 5px 0; font-size: 16px; width: 100%; }
+    #result { margin-top: 20px; font-weight: bold; white-space: pre-wrap; background: #f8f8f8; padding: 15px; border-radius: 5px; }
   </style>
 </head>
 <body>
 
-  <h1>查詢活動組別與桌次</h1>
-  <input type="text" id="searchInput" placeholder="請輸入員工編號、中文姓名或英文姓名" />
-  <button onclick="searchData()">查詢</button>
+<h2>活動資訊查詢</h2>
+<p>請輸入 <strong>員工編號</strong>、<strong>中文姓名</strong> 或 <strong>英文姓名</strong>：</p>
+<input type="text" id="searchInput" placeholder="例如：A12345 或 王小明 或 Ming Wang">
+<button onclick="search()">查詢</button>
 
-  <div id="result"></div>
+<div id="result">資料載入中，請稍候...</div>
 
-  <script>
-    const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/1w4e0JW8HWC5TgpqYNv3O8lEyg7NnywNo67qgwCZC1d4/gviz/tq?tqx=out:csv";
+<script>
+  let data = [];
 
-    // Google Sheets 資料載入與處理
-    function loadSheetData(callback) {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', spreadsheetUrl, true);
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          const rows = xhr.responseText.split('\n').map(row => row.split(','));
-          const headers = rows[0];
-          const data = rows.slice(1).map(row => {
-            const obj = {};
-            row.forEach((value, index) => {
-              obj[headers[index]] = value.trim();
-            });
-            return obj;
-          });
-          callback(data);
-        } else {
-          showError("無法載入資料，請檢查 API 訪問設定！");
-        }
-      };
-      xhr.onerror = function() {
-        showError("網絡錯誤，無法連接 Google Sheets API！");
-      };
-      xhr.send();
+  // 你的 Google Sheets ID
+  const sheetId = '1w4e0JW8HWC5TgpqYNv3O8lEyg7NnywNo67qgwCZC1d4';
+  const sheetURL = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+
+  // 載入 Google Sheets 資料
+  fetch(sheetURL)
+    .then(res => res.text())
+    .then(rep => {
+      // 處理 Google Sheets API 返回的 JSON 格式資料
+      const json = JSON.parse(rep.substr(47).slice(0, -2));
+      const rows = json.table.rows;
+      data = rows.map(row => ({
+        cname: row.c[0]?.v?.trim() || "",
+        ename: row.c[1]?.v?.trim() || "",
+        id: row.c[2]?.v?.trim() || "",
+        dayGroup: row.c[3]?.v?.trim() || "",
+        room: row.c[4]?.v?.trim() || "",
+        dinnerTable: row.c[5]?.v?.trim() || ""
+      }));
+
+      document.getElementById('result').textContent = '請輸入資料查詢。';
+    })
+    .catch(err => {
+      console.error('載入 Google Sheets 失敗', err);
+      document.getElementById('result').textContent = '資料載入失敗，請確認試算表是否設為公開。';
+    });
+
+  // 查詢函式
+  function search() {
+    const input = document.getElementById("searchInput").value.trim().toLowerCase();
+    const resultDiv = document.getElementById("result");
+
+    if (input === "") {
+      resultDiv.textContent = "❌ 請輸入查詢條件！";
+      return;
     }
 
-    // 查詢資料
-    function searchData() {
-      const query = document.getElementById("searchInput").value.trim().toLowerCase();
-      if (query === "") {
-        document.getElementById("result").innerHTML = "請輸入查詢條件";
-        return;
-      }
+    // 查找符合條件的員工資料
+    const person = data.find(p =>
+      p.id.toLowerCase() === input ||
+      p.cname.toLowerCase() === input ||
+      p.ename.toLowerCase() === input
+    );
 
-      loadSheetData(function(data) {
-        const filteredData = data.filter(row => {
-          return (
-            row["中文姓名"] && row["中文姓名"].toLowerCase().includes(query) ||
-            row["英文姓名"] && row["英文姓名"].toLowerCase().includes(query) ||
-            row["員工編號"] && row["員工編號"].includes(query)
-          );
-        });
+    if (person) {
+      resultDiv.textContent =
+        `✔️ 查詢成功：
+中文姓名：${person.cname}
+英文姓名：${person.ename}
+員工編號：${person.id}
 
-        if (filteredData.length === 0) {
-          document.getElementById("result").innerHTML = "查無資料";
-        } else {
-          let resultHTML = "<h3>查詢結果：</h3><ul>";
-          filteredData.forEach(row => {
-            resultHTML += `<li><strong>${row["中文姓名"]} (${row["英文姓名"]})</strong><br>白天組別: ${row["白天組別"] || '無'}<br>會議室: ${row["會議室"] || '無'}<br>晚宴桌次: ${row["晚宴桌次"] || '無'}</li>`;
-          });
-          resultHTML += "</ul>";
-          document.getElementById("result").innerHTML = resultHTML;
-        }
-      });
+🕑 白天組別：${person.dayGroup}
+🏢 會議室：${person.room}
+🍽️ 晚宴桌次：${person.dinnerTable}`;
+    } else {
+      resultDiv.textContent = "❌ 查無資料，請確認輸入是否正確。";
     }
-
-    // 顯示錯誤訊息
-    function showError(message) {
-      document.getElementById("result").innerHTML = `<div class="error">${message}</div>`;
-    }
-  </script>
+  }
+</script>
 
 </body>
 </html>
