@@ -25,6 +25,9 @@
       margin-top: 20px;
       border: 1px solid #ddd;
     }
+    .error {
+      color: red;
+    }
   </style>
 </head>
 <body>
@@ -55,8 +58,11 @@
           });
           callback(data);
         } else {
-          console.error("無法載入資料");
+          showError("無法載入資料，請檢查 API 訪問設定！");
         }
+      };
+      xhr.onerror = function() {
+        showError("網絡錯誤，無法連接 Google Sheets API！");
       };
       xhr.send();
     }
@@ -72,9 +78,9 @@
       loadSheetData(function(data) {
         const filteredData = data.filter(row => {
           return (
-            row["中文姓名"].toLowerCase().includes(query) ||
-            row["英文姓名"].toLowerCase().includes(query) ||
-            row["員工編號"].includes(query)
+            row["中文姓名"] && row["中文姓名"].toLowerCase().includes(query) ||
+            row["英文姓名"] && row["英文姓名"].toLowerCase().includes(query) ||
+            row["員工編號"] && row["員工編號"].includes(query)
           );
         });
 
@@ -83,12 +89,17 @@
         } else {
           let resultHTML = "<h3>查詢結果：</h3><ul>";
           filteredData.forEach(row => {
-            resultHTML += `<li><strong>${row["中文姓名"]} (${row["英文姓名"]})</strong><br>白天組別: ${row["白天組別"]}<br>會議室: ${row["會議室"]}<br>晚宴桌次: ${row["晚宴桌次"]}</li>`;
+            resultHTML += `<li><strong>${row["中文姓名"]} (${row["英文姓名"]})</strong><br>白天組別: ${row["白天組別"] || '無'}<br>會議室: ${row["會議室"] || '無'}<br>晚宴桌次: ${row["晚宴桌次"] || '無'}</li>`;
           });
           resultHTML += "</ul>";
           document.getElementById("result").innerHTML = resultHTML;
         }
       });
+    }
+
+    // 顯示錯誤訊息
+    function showError(message) {
+      document.getElementById("result").innerHTML = `<div class="error">${message}</div>`;
     }
   </script>
 
