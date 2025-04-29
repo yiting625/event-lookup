@@ -2,34 +2,76 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- 加入這行讓手機瀏覽正常縮放 -->
   <title>活動資訊查詢系統</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    input, button { padding: 8px; margin: 5px 0; font-size: 16px; width: 100%; }
-    #result { margin-top: 20px; font-weight: bold; white-space: pre-wrap; background: #f8f8f8; padding: 15px; border-radius: 5px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+      margin: 0;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    input, button {
+      padding: 12px;
+      margin: 8px 0;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
 
-<h2>活動資訊查詢</h2>
-<p>請輸入 <strong>員工編號</strong>、<strong>中文姓名</strong> 或 <strong>英文姓名</strong>：</p>
-<input type="text" id="searchInput" placeholder="例如：A12345 或 王小明 或 Ming Wang">
-<button onclick="search()">查詢</button>
+<div class="container">
+  <h2>活動資訊查詢</h2>
+  <p>請輸入 <strong>員工編號</strong>、<strong>中文姓名</strong> 或 <strong>英文姓名</strong>：</p>
+  <input type="text" id="searchInput" placeholder="例如：A12345 或 王小明 或 Ming Wang">
+  <button onclick="search()">查詢</button>
 
-<div id="result">資料載入中，請稍候...</div>
+  <div id="result">資料載入中，請稍候...</div>
+</div>
 
 <script>
   let data = [];
 
-  // 你的 Google Sheets ID
   const sheetId = '1w4e0JW8HWC5TgpqYNv3O8lEyg7NnywNo67qgwCZC1d4';
   const sheetURL = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
 
-  // 載入 Google Sheets 資料
   fetch(sheetURL)
     .then(res => res.text())
     .then(rep => {
-      // 處理 Google Sheets API 返回的 JSON 格式資料
       const json = JSON.parse(rep.substr(47).slice(0, -2));
       const rows = json.table.rows;
       data = rows.map(row => ({
@@ -40,7 +82,6 @@
         room: row.c[4]?.v?.trim() || "",
         dinnerTable: row.c[5]?.v?.trim() || ""
       }));
-
       document.getElementById('result').textContent = '請輸入資料查詢。';
     })
     .catch(err => {
@@ -48,7 +89,6 @@
       document.getElementById('result').textContent = '資料載入失敗，請確認試算表是否設為公開。';
     });
 
-  // 查詢函式
   function search() {
     const input = document.getElementById("searchInput").value.trim().toLowerCase();
     const resultDiv = document.getElementById("result");
@@ -58,7 +98,6 @@
       return;
     }
 
-    // 查找符合條件的員工資料
     const person = data.find(p =>
       p.id.toLowerCase() === input ||
       p.cname.toLowerCase() === input ||
